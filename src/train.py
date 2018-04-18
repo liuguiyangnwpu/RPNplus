@@ -1,11 +1,12 @@
-import inspect
 import os
+import sys
 import time
-import  sys
+import shutil
+
 import numpy as np
 import tensorflow as tf
-import shutil
-import data_engine
+
+from src import data_engine
 
 VGG_MEAN = [103.939, 116.779, 123.68]
 
@@ -17,18 +18,10 @@ feature_width = int(np.ceil(image_width / 16.))
 
 class RPN:
     def __init__(self, vgg16_npy_path=None):
-        if vgg16_npy_path is None:
-            path = inspect.getfile(Vgg16)
-            path = os.path.abspath(os.path.join(path, os.pardir))
-            path = os.path.join(path, 'vgg16.npy')
-            vgg16_npy_path = path
-            print path
-
         self.data_dict = np.load(vgg16_npy_path, encoding='latin1').item()
         print('npy file loaded')
 
     def build(self, rgb, label, label_weight, bbox_target, bbox_loss_weight, learning_rate):
-       
         start_time = time.time()
         print('build model started')
 
@@ -37,11 +30,9 @@ class RPN:
         assert red.get_shape().as_list()[1:] == [image_height, image_width, 1]
         assert green.get_shape().as_list()[1:] == [image_height, image_width, 1]
         assert blue.get_shape().as_list()[1:] == [image_height, image_width, 1]
-        bgr = tf.concat([
-            blue - VGG_MEAN[0],
-            green - VGG_MEAN[1],
-            red - VGG_MEAN[2],
-        ],3)
+
+        bgr = tf.concat([blue - VGG_MEAN[0], green - VGG_MEAN[1], red - VGG_MEAN[2]], 3)
+
         assert bgr.get_shape().as_list()[1:] == [image_height, image_width, 3]
         # Conv layer 1
         self.conv1_1 = self.conv_layer_const(bgr, 'conv1_1')
@@ -199,7 +190,7 @@ def checkFile(fileName):
     if os.path.isfile(fileName):
         return True
     else:
-        print fileName, 'is not found!'
+        raise ValueError(fileName + " is not found !")
         exit()
 
 
@@ -212,13 +203,13 @@ def checkDir(fileName, creat=False):
         if creat:
             os.mkdir(fileName)
         else:
-            print fileName, 'is not found!'
+            raise ValueError(fileName + " is not found !")
             exit()
 
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        print 'please input GPU index'
+        print ('please input GPU index')
         exit()
 
     gpuNow = '/gpu:'+sys.argv[1]
@@ -252,18 +243,18 @@ if __name__ == '__main__':
 
         sess.run(tf.initialize_all_variables())
         for var in tf.trainable_variables():
-            print var.name, var.get_shape().as_list(), sess.run(tf.nn.l2_loss(var))
+            print (var.name, var.get_shape().as_list(), sess.run(tf.nn.l2_loss(var)))
 
         
         cnnData = data_engine.CNNData(batch_size, imageLoadDir, anoLoadDir)
-        print 'Training Begin'
+        print ('Training Begin')
     
         train_loss = []
         train_cross_entropy = []
         train_bbox_loss = []
         start_time = time.time()
 
-        for i in xrange(1, step + 1):
+        for i in range(1, step + 1):
             batch = cnnData.prepare_data()
             if i <= 7000:
                 l_r = 0.001
@@ -278,13 +269,10 @@ if __name__ == '__main__':
                            bbox_loss_weight: batch[4], learning_rate: l_r})
 
             train_loss.append(train_loss_iter)
-          
 
             if i % print_time == 0:
-              
-                print ' step :', i, 'time :', time.time() - start_time, 'loss :', np.mean(
-                    train_loss), 'l_r :', l_r
+                print(' step :', i, 'time :', time.time() - start_time, 'loss :', np.mean(train_loss), 'l_r :', l_r)
                 train_loss = []
 
-            if i% saveTime == 0:
+            if i % saveTime == 0:
                 cnn.save(modelSaveDir, i)

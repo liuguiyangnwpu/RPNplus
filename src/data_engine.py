@@ -1,14 +1,14 @@
-
 from sklearn.utils.extmath import cartesian
 import numpy as np
 from PIL import Image
 
-import NMS
+from src import NMS
 import os
 
 wandhG = [[100.0, 100.0], [300.0, 300.0], [500.0, 500.0],
           [200.0, 100.0], [370.0, 185.0], [440.0, 220.0],
           [100.0, 200.0], [185.0, 370.0], [220.0, 440.0]]
+
 
 def getAllFiles(dirName, houzhui):
     results = []
@@ -19,6 +19,7 @@ def getAllFiles(dirName, houzhui):
             results.append([file_path,os.path.splitext(file)[0]])
 
     return results
+
 
 class RPN_Test(object):
     def __init__(self):

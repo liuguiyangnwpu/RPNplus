@@ -1,15 +1,17 @@
-import _init_paths
-import inspect
 import os
-import shutil
-import time
 import sys
+import time
+import shutil
+
+from datetime import datetime
+
 import numpy as np
 import tensorflow as tf
 from PIL import Image
-from image_pylib import IMGLIB
-from datetime import datetime  
-import data_engine
+
+from src import data_engine
+from src.image_pylib.image_pylib import IMGLIB
+
 
 VGG_MEAN = [103.939, 116.779, 123.68]
 
@@ -21,21 +23,11 @@ feature_width = int(np.ceil(image_width / 16.))
 
 class RPN:
     def __init__(self, vgg16_npy_path=None, rpn_npy_path=None):
-        if vgg16_npy_path is None:
-            path = inspect.getfile(Vgg16)
-            path = os.path.abspath(os.path.join(path, os.pardir))
-            path = os.path.join(path, 'vgg16.npy')
-            vgg16_npy_path = path
-            print (path)
-        if rpn_npy_path is None:
-            exit()
-
         self.vgg16_params = np.load(vgg16_npy_path, encoding='latin1').item()
         self.rpn_params = np.load(rpn_npy_path, encoding='latin1').item()
         print('npy file loaded')
 
     def build(self, rgb):
-     
         start_time = time.time()
         print('build model started')
 
@@ -44,11 +36,8 @@ class RPN:
         assert red.get_shape().as_list()[1:] == [image_height, image_width, 1]
         assert green.get_shape().as_list()[1:] == [image_height, image_width, 1]
         assert blue.get_shape().as_list()[1:] == [image_height, image_width, 1]
-        bgr = tf.concat( [
-            blue - VGG_MEAN[0],
-            green - VGG_MEAN[1],
-            red - VGG_MEAN[2],
-        ],3)
+        bgr = tf.concat([blue - VGG_MEAN[0], green - VGG_MEAN[1], red - VGG_MEAN[2]], 3)
+
         assert bgr.get_shape().as_list()[1:] == [image_height, image_width, 3]
         # Conv layer 1
         self.conv1_1 = self.conv_layer_const(bgr, 'conv1_1')
@@ -58,7 +47,6 @@ class RPN:
         self.conv2_1 = self.conv_layer_const(self.pool1, 'conv2_1')
         self.conv2_2 = self.conv_layer_const(self.conv2_1, 'conv2_2')
         self.pool2 = self.max_pool(self.conv2_2, 'pool2')
-
 
         # Conv layer 3
         self.conv3_1 = self.conv_layer(self.pool2, 'conv3_1')
@@ -123,7 +111,6 @@ class RPN:
         with tf.variable_scope(name):
             filt = self.get_conv_filter(name)
             conv = tf.nn.conv2d(bottom, filt, [1, 1, 1, 1], padding='SAME')
-
             conv_biases = self.get_bias(name)
             bias = tf.nn.bias_add(conv, conv_biases)
             if use_relu == 1:
@@ -173,25 +160,22 @@ def checkDir(fileName, creat=False):
         if creat:
             os.mkdir(fileName)
         else:
-            print (fileName, 'is not found!')
+            print(fileName, 'is not found!')
             exit()
 
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        print ('please input GPU index')
+        print('please input GPU index')
         exit()
-    #gpuNow = '/gpu:'+sys.argv[1]
-
 
     modelPath = './models/model.npy'
-
     vggModelPath = './models/vgg16.npy'
 
     imageDir = './images/'
     resultsDir= './results/'
-    checkDir(imageDir,False)
-    checkDir(resultsDir,True)
+    checkDir(imageDir, False)
+    checkDir(resultsDir, True)
     checkFile(vggModelPath)
     checkFile(modelPath)
 
