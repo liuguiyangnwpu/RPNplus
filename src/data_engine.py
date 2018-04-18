@@ -73,7 +73,6 @@ class RPN_Test(object):
                     anchor = anchors[k, :]
                     proposals[index, :] = anchor + np.array([w, h, w, h])
 
-        
         self.proposals = proposals
 
     def generate_anchors(self):
@@ -86,9 +85,10 @@ class RPN_Test(object):
                 [-0.5 * anchor_width, -0.5 * anchor_height, 0.5 * anchor_width, 0.5 * anchor_height])
         return anchors
 
+
 class My_Caltech_Test(object):
     def __init__(self ,original):
-        self.original = original;
+        self.original = original
         self.image_height = 720
         self.image_width = 960
 
@@ -135,7 +135,6 @@ class My_Caltech_Test(object):
         return bbox
     
     def proposal_prepare(self):
-       
         anchors = self.generate_anchors()
         proposals = np.zeros([self.anchor_size * self.convmap_width * self.convmap_height, 4])
 
@@ -148,7 +147,6 @@ class My_Caltech_Test(object):
                     anchor = anchors[k, :]
                     proposals[index, :] = anchor + np.array([w, h, w, h])
 
-        
         self.proposals = proposals
 
     def generate_anchors(self):
@@ -175,8 +173,9 @@ class My_Caltech_Test(object):
         im = Image.open(imgPath)
         return im.resize( ( int(im.width*self.img_resize), int(im.height*self.img_resize) ), Image.ANTIALIAS)
 
+
 class CNNData(object):
-    def __init__(self, batch_size=128, imageLoadDir='' , anoLoadDir='',original = False):
+    def __init__(self, batch_size=128, imageLoadDir='', anoLoadDir='', original=False):
         self.batch_size = batch_size
         if anoLoadDir == '':
             self.useList = True
@@ -188,7 +187,6 @@ class CNNData(object):
         else:
             self.imageLoadDir = imageLoadDir
             self.anoLoadDir = anoLoadDir
-
 
         self.aspect_ratio = 0.41
         self.image_resize_factor = 1.5
@@ -213,23 +211,20 @@ class CNNData(object):
         self.load_data()
 
     def load_data(self):
-        
-        print ('Load Training Data')
+        print('Load Training Data')
 
         self.imdb_train = self.load_image()
         self.imdb_train = self.proposal_prepare(self.imdb_train)
-        print ('Done')
+        print('Done')
 
         self.inds = self.generate_minibatch()
-        print ('Total Batches:', self.inds.shape[0])
+        print('Total Batches:', self.inds.shape[0])
 
         self.idx = 0
 
     def load_test_data(self, testDataPath):
-        
-        print ('Load Testing Data')
-
-        print ('Done')
+        print('Load Testing Data')
+        print('Done')
 
     def prepare_data(self):
         if self.idx == self.inds.shape[0]:
@@ -255,7 +250,6 @@ class CNNData(object):
         labels[fg_idx, 1] = 0
         bbox_targets = roi_anchor[:, 1:5] * self.bbox_normalize_scale
 
-        
         fg_num = min(fg_idx.shape[0], self.batch_size / 6)
         np.random.shuffle(fg_idx)
         fg_idx = fg_idx[:fg_num]
@@ -361,8 +355,6 @@ class CNNData(object):
             ignore = ignore or (bbtype != 'person')
             ignore = ignore or (bba[3] < 40)
 
-           
-
             roi[iter_, :4] = bba
             roi[iter_, 4] = ignore
         return roi
@@ -395,7 +387,6 @@ class CNNData(object):
             return anchors
 
     def proposal_prepare(self, imdb):
-      
         anchors = self.generate_anchors()
         proposals = np.zeros([self.anchor_size * self.convmap_width * self.convmap_height, 4])
 
@@ -411,8 +402,10 @@ class CNNData(object):
         # ignore cross-boundary anchors
         self.proposals = proposals
         proposals_keep = np.where(
-            (proposals[:, 0] > -5) & (proposals[:, 1] > -5) & (proposals[:, 2] < self.image_width + 5) & (
-                proposals[:, 3] < self.image_height + 5))[0]
+            (proposals[:, 0] > -5) &
+            (proposals[:, 1] > -5) &
+            (proposals[:, 2] < self.image_width + 5) &
+            (proposals[:, 3] < self.image_height + 5))[0]
         self.proposals_mask = np.zeros(proposals.shape[0])
         self.proposals_mask[proposals_keep] = 1
 
@@ -422,9 +415,9 @@ class CNNData(object):
         n = len(imdb)
         foreground_anchor_size = np.zeros(n)
         for i in range(n):
-            imdb[i]['roi_anchor'], foreground_anchor_size[i] = compute_target(imdb[i]['roi'], proposals, self.fg_thresh,
-                                                                              self.bg_thresh)
-            imdb[i]['fgsize']= foreground_anchor_size[i]
+            imdb[i]['roi_anchor'], foreground_anchor_size[i] = compute_target(
+                imdb[i]['roi'], proposals, self.fg_thresh, self.bg_thresh)
+            imdb[i]['fgsize'] = foreground_anchor_size[i]
             if i % 500 == 0:
                 print('Compute Target: %d/%d' % (i, n))
         print('Compute Target: %d/%d' % (n, n))
@@ -436,6 +429,7 @@ class CNNData(object):
         keep = np.where(self.fg_anchors_per_image >= 10)[0]
         np.random.shuffle(keep)
         return keep
+
 
 def compute_target(roi_t, proposals, fg_thresh, bg_thresh):
     roi = roi_t.copy()
@@ -461,6 +455,7 @@ def compute_target(roi_t, proposals, fg_thresh, bg_thresh):
 
     foreground = np.sum(roi_anchor[:, 0] == 1)
     return roi_anchor, foreground
+
 
 def compute_overlap(mat1, mat2):
     s1 = mat1.shape[0]
@@ -500,6 +495,7 @@ def compute_overlap(mat1, mat2):
     overlap = np.transpose(ooo.reshape(s1, s2), (1, 0))
 
     return overlap
+
 
 def compute_regression(mat1, mat2):
     target = np.zeros(4)

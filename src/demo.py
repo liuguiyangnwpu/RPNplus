@@ -165,30 +165,22 @@ def checkDir(fileName, creat=False):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) < 2:
-        print('please input GPU index')
-        exit()
+    modelPath = '../models/pretrained/model.npy'
+    vggModelPath = '../models/pretrained/vgg16.npy'
 
-    modelPath = './models/model.npy'
-    vggModelPath = './models/vgg16.npy'
-
-    imageDir = './images/'
-    resultsDir= './results/'
+    imageDir = '../images/'
+    resultsDir = '../results/'
     checkDir(imageDir, False)
     checkDir(resultsDir, True)
     checkFile(vggModelPath)
     checkFile(modelPath)
-
 
     image_height = 720
     image_width = 960
 
     testDeal = data_engine.RPN_Test()
 
-
-
-    
-    sess = tf.Session()  
+    sess = tf.Session()
     image = tf.placeholder(tf.float32, [1, image_height, image_width, 3])
 
     cnn = RPN(vggModelPath, modelPath)
@@ -200,7 +192,7 @@ if __name__ == '__main__':
     imageNames = data_engine.getAllFiles(imageDir, '.jpg')
     startTime = time.time()
     for imageName in imageNames:
-        print (imageName[0])
+        print(imageName[0])
         im = Image.open(imageName[0])
         pix = np.array(im.getdata()).reshape(1, image_height, image_width, 3).astype(np.float32)
         
@@ -209,11 +201,11 @@ if __name__ == '__main__':
         
         end_ = datetime.utcnow()  
         c = (end_ - start_)  
-        print ('%s uses %d milliseconds' % (imageName[0] , c.microseconds/1000  ) )
+        print('%s uses %d milliseconds' % (imageName[0] , c.microseconds/1000  ) )
 
         bbox = testDeal.rpn_nms(test_prob, test_bbox_pred)
         imglib.read_img(imageName[0])
         imglib.setBBXs(bbox, 'person')
         imglib.drawBox(0.99)
         imglib.save_img(resultsDir+'/'+imageName[1]+'.jpg')
-    print ('total use time : %ds' % (time.time() - startTime))
+    print('total use time : %ds' % (time.time() - startTime))

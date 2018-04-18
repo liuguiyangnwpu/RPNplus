@@ -208,21 +208,22 @@ def checkDir(fileName, creat=False):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) < 2:
-        print ('please input GPU index')
-        exit()
+    if len(sys.argv) == 2:
+        print('please input GPU index')
+        gpuNow = '/gpu:' + sys.argv[1]
+    elif len(sys.argv) == 1:
+        gpuNow = "/cpu:0"
 
-    gpuNow = '/gpu:'+sys.argv[1]
     print_time = 100
     step = 10000
-    batch_size = 256
+    batch_size = 1
     saveTime = 2000
 
-    modelSaveDir = './models/'
-    vggModelPath = './models/vgg16.npy'
+    modelSaveDir = '../models/'
+    vggModelPath = '../models/pretrained/vgg16.npy'
 
-    imageLoadDir = './yourImagePath/'
-    anoLoadDir = './yourAnnotationPath/'
+    imageLoadDir = '/Volumes/projects/DataSets/RPNPLUS_Pedestrians/synthetic_dataset/image/'
+    anoLoadDir = '/Volumes/projects/DataSets/RPNPLUS_Pedestrians/synthetic_dataset/imageAno/'
 
     checkDir(modelSaveDir, False)
     checkDir(imageLoadDir, False)
@@ -237,17 +238,16 @@ if __name__ == '__main__':
         bbox_loss_weight = tf.placeholder(tf.float32, [None])
         learning_rate = tf.placeholder(tf.float32)
 
-        cnn = RPN(vggModelPath)
+        rpn_model = RPN(vggModelPath)
         with tf.name_scope('content_rpn'):
-            cnn.build(image, label, label_weight, bbox_target, bbox_loss_weight, learning_rate)
+            rpn_model.build(image, label, label_weight, bbox_target, bbox_loss_weight, learning_rate)
 
         sess.run(tf.initialize_all_variables())
         for var in tf.trainable_variables():
-            print (var.name, var.get_shape().as_list(), sess.run(tf.nn.l2_loss(var)))
+            print(var.name, var.get_shape().as_list(), sess.run(tf.nn.l2_loss(var)))
 
-        
         cnnData = data_engine.CNNData(batch_size, imageLoadDir, anoLoadDir)
-        print ('Training Begin')
+        print('Training Begin')
     
         train_loss = []
         train_cross_entropy = []
@@ -264,7 +264,7 @@ if __name__ == '__main__':
                 else:
                     l_r = 0.00001
             (_, train_loss_iter, train_cross_entropy_iter, train_bbox_loss_iter, cls, bbox) = sess.run(
-                [cnn.train_step, cnn.loss, cnn.cross_entropy, cnn.bb_loss, cnn.cls_score, cnn.bbox_pred],
+                [rpn_model.train_step, rpn_model.loss, rpn_model.cross_entropy, rpn_model.bb_loss, rpn_model.cls_score, rpn_model.bbox_pred],
                 feed_dict={image: batch[0], label: batch[1], label_weight: batch[2], bbox_target: batch[3],
                            bbox_loss_weight: batch[4], learning_rate: l_r})
 
@@ -275,4 +275,4 @@ if __name__ == '__main__':
                 train_loss = []
 
             if i % saveTime == 0:
-                cnn.save(modelSaveDir, i)
+                rpn_model.save(modelSaveDir, i)
