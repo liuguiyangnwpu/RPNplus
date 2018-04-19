@@ -1,9 +1,11 @@
-from sklearn.utils.extmath import cartesian
+import os
+
 import numpy as np
 from PIL import Image
+from sklearn.utils.extmath import cartesian
 
 from src import NMS
-import os
+
 
 wandhG = [[100.0, 100.0], [300.0, 300.0], [500.0, 500.0],
           [200.0, 100.0], [370.0, 185.0], [440.0, 220.0],
@@ -84,94 +86,6 @@ class RPN_Test(object):
             anchors[i, :] = np.array(
                 [-0.5 * anchor_width, -0.5 * anchor_height, 0.5 * anchor_width, 0.5 * anchor_height])
         return anchors
-
-
-class My_Caltech_Test(object):
-    def __init__(self ,original):
-        self.original = original
-        self.image_height = 720
-        self.image_width = 960
-
-        self.convmap_height = int(np.ceil(self.image_height / 16.))
-        self.convmap_width = int(np.ceil(self.image_width / 16.))
-
-        self.anchor_size = 9
-        self.img_resize = 1.5
-        self.bbox_normalize_scale = 5
-        self.wandh = wandhG
-
-        self.aspect_ratio = 0.41
-        self.image_resize_factor = 1.5
-        self.anchor_min_height = 40 * self.image_resize_factor
-        self.anchor_factor = 1.3
-
-        self.proposal_prepare()
-
-    def rpn_nms(self, prob, bbox_pred):
-        prob = prob[:, 0]
-        bbox_pred /= self.bbox_normalize_scale
-        
-        anchors = self.proposals.copy()
-        anchors[:, 2] -= anchors[:, 0]
-        anchors[:, 3] -= anchors[:, 1]
-        anchors[:, 0] = bbox_pred[:, 0] * anchors[:, 2] + anchors[:, 0]
-        anchors[:, 1] = bbox_pred[:, 1] * anchors[:, 3] + anchors[:, 1]
-        anchors[:, 2] = np.exp(bbox_pred[:, 2]) * anchors[:, 2]
-        anchors[:, 3] = np.exp(bbox_pred[:, 3]) * anchors[:, 3]
-        bbox = np.zeros([anchors.shape[0], 5])
-        
-        bbox[:, :4] = anchors
-        bbox[:, 4] = prob
-        bbox = NMS.filter_bbox(bbox)
-        bbox = NMS.non_max_suppression_fast(bbox, 0.7)
-
-        keep_prob = np.sort(bbox[:, 4])[max(-50, -1 * bbox.shape[0])]
-        
-        index = np.where(bbox[:, 4] >= keep_prob)[0]
-        bbox = bbox[index]
-
-        bbox[:, :4] = bbox[:, :4] / self.img_resize
-
-        return bbox
-    
-    def proposal_prepare(self):
-        anchors = self.generate_anchors()
-        proposals = np.zeros([self.anchor_size * self.convmap_width * self.convmap_height, 4])
-
-        for i in range(self.convmap_height):
-            h = i * 16 + 8
-            for j in range(self.convmap_width):
-                w = j * 16 + 8
-                for k in range(self.anchor_size):
-                    index = i * self.convmap_width * self.anchor_size + j * self.anchor_size + k
-                    anchor = anchors[k, :]
-                    proposals[index, :] = anchor + np.array([w, h, w, h])
-
-        self.proposals = proposals
-
-    def generate_anchors(self):
-        if self.original:
-            anchors = np.zeros([self.anchor_size, 4])
-            anchor_height = self.anchor_min_height
-            for i in range(self.anchor_size):
-                anchor_width = anchor_height * self.aspect_ratio
-                anchors[i, :] = np.array(
-                    [-0.5 * anchor_width, -0.5 * anchor_height, 0.5 * anchor_width, 0.5 * anchor_height])
-                anchor_height *= self.anchor_factor
-            return anchors
-        else:
-            anchors = np.zeros([self.anchor_size, 4])
-
-            for i in range(self.anchor_size):
-                anchor_width = self.wandh[i][0]
-                anchor_height = self.wandh[i][1]
-                anchors[i, :] = np.array(
-                    [-0.5 * anchor_width, -0.5 * anchor_height, 0.5 * anchor_width, 0.5 * anchor_height])
-            return anchors
-
-    def open(self,imgPath):
-        im = Image.open(imgPath)
-        return im.resize( ( int(im.width*self.img_resize), int(im.height*self.img_resize) ), Image.ANTIALIAS)
 
 
 class CNNData(object):

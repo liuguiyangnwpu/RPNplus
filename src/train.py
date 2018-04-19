@@ -31,7 +31,9 @@ class RPN:
         assert green.get_shape().as_list()[1:] == [image_height, image_width, 1]
         assert blue.get_shape().as_list()[1:] == [image_height, image_width, 1]
 
-        bgr = tf.concat([blue - VGG_MEAN[0], green - VGG_MEAN[1], red - VGG_MEAN[2]], 3)
+        bgr = tf.concat(
+            [blue - VGG_MEAN[0], green - VGG_MEAN[1], red - VGG_MEAN[2]],
+            axis=3)
 
         assert bgr.get_shape().as_list()[1:] == [image_height, image_width, 3]
         # Conv layer 1
@@ -73,24 +75,46 @@ class RPN:
         self.pool4_p = self.pool4 / (
             tf.sqrt(tf.reduce_mean(tf.square(self.pool4))) / normalization_factor) * self.gamma4
         # Proposal Convolution
-        self.conv_proposal_3, conv_proposal_3_wd = self.conv_layer_new(self.pool3_p, 'conv_proposal_3',
-                                                                       kernel_size=[5, 2], out_channel=256, stddev=0.01)
+        self.conv_proposal_3, conv_proposal_3_wd = self.conv_layer_new(
+            self.pool3_p,
+            'conv_proposal_3',
+            kernel_size=[5, 2],
+            out_channel=256,
+            stddev=0.01)
         self.relu_proposal_3 = tf.nn.relu(self.conv_proposal_3)
-        self.conv_proposal_4, conv_proposal_4_wd = self.conv_layer_new(self.pool4_p, 'conv_proposal_4',
-                                                                       kernel_size=[5, 2], out_channel=512, stddev=0.01)
+        self.conv_proposal_4, conv_proposal_4_wd = self.conv_layer_new(
+            self.pool4_p,
+            'conv_proposal_4',
+            kernel_size=[5, 2],
+            out_channel=512,
+            stddev=0.01)
         self.relu_proposal_4 = tf.nn.relu(self.conv_proposal_4)
-        self.conv_proposal_5, conv_proposal_5_wd = self.conv_layer_new(self.conv5_3, 'conv_proposal_5',
-                                                                       kernel_size=[5, 2], out_channel=512, stddev=0.01)
+        self.conv_proposal_5, conv_proposal_5_wd = self.conv_layer_new(
+            self.conv5_3,
+            'conv_proposal_5',
+            kernel_size=[5, 2],
+            out_channel=512,
+            stddev=0.01)
         self.relu_proposal_5 = tf.nn.relu(self.conv_proposal_5)
         self.weight_dacay += conv_proposal_3_wd + conv_proposal_4_wd + conv_proposal_5_wd
         # Concatrate
-        self.relu_proposal_all = tf.concat( [self.relu_proposal_3, self.relu_proposal_4, self.relu_proposal_5],3)
+        self.relu_proposal_all = tf.concat(
+            [self.relu_proposal_3, self.relu_proposal_4, self.relu_proposal_5],
+            axis=3)
         # RPN_TEST_6(>=7)
 
-        self.conv_cls_score, conv_cls_wd = self.conv_layer_new(self.relu_proposal_all, 'conv_cls_score',
-                                                               kernel_size=[1, 1], out_channel=18, stddev=0.01)
-        self.conv_bbox_pred, conv_bbox_wd = self.conv_layer_new(self.relu_proposal_all, 'conv_bbox_pred',
-                                                                kernel_size=[1, 1], out_channel=36, stddev=0.01)
+        self.conv_cls_score, conv_cls_wd = self.conv_layer_new(
+            self.relu_proposal_all,
+            'conv_cls_score',
+            kernel_size=[1, 1],
+            out_channel=18,
+            stddev=0.01)
+        self.conv_bbox_pred, conv_bbox_wd = self.conv_layer_new(
+            self.relu_proposal_all,
+            'conv_bbox_pred',
+            kernel_size=[1, 1],
+            out_channel=36,
+            stddev=0.01)
         self.weight_dacay += conv_cls_wd + conv_bbox_wd
 
         assert self.conv_cls_score.get_shape().as_list()[1:] == [feature_height, feature_width, 18]
@@ -101,8 +125,8 @@ class RPN:
 
         self.prob = tf.nn.softmax(self.cls_score, name="prob")
         self.cross_entropy = tf.reduce_sum(
-            tf.nn.softmax_cross_entropy_with_logits(labels=label,
-                                                    logits=self.cls_score) * label_weight) / tf.reduce_sum(label_weight)
+            tf.nn.softmax_cross_entropy_with_logits(
+                labels=label, logits=self.cls_score) * label_weight) / tf.reduce_sum(label_weight)
 
         bbox_error = tf.abs(self.bbox_pred - bbox_target)
         bbox_loss = 0.5 * bbox_error * bbox_error * tf.cast(bbox_error < 1, tf.float32) + (bbox_error - 0.5) * tf.cast(
@@ -150,7 +174,10 @@ class RPN:
         with tf.variable_scope(name):
             shape = bottom.get_shape().as_list()[-1]
             filt = tf.Variable(
-                tf.random_normal([kernel_size[0], kernel_size[1], shape, out_channel], mean=0.0, stddev=stddev),
+                tf.random_normal(
+                    [kernel_size[0], kernel_size[1], shape, out_channel],
+                    mean=0.0,
+                    stddev=stddev),
                 name='filter')
             conv_biases = tf.Variable(tf.zeros([out_channel]), name='biases')
 
